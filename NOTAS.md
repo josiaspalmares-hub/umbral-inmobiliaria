@@ -37,6 +37,10 @@
 - 4G lenta + CPU 4 veces más lenta: el titular aparece en 1,66 s; el 3D no se descarga al inicio.
 - Con "menos movimiento": sale el dibujo SVG; el botón "Ver en 3D" lo activa sin giro automático.
 
+## Publicación
+
+- Vercel conectado a GitHub el 17-nov-2026: cada push a `main` publica solo en umbral-caracas.vercel.app.
+
 ## Falta / ideas
 
 - Fotos reales si un cliente la usa; página propia por propiedad (mejor para Google).
