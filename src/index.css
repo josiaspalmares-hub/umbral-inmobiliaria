@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource/manrope/latin-400.css";
+@import "@fontsource/manrope/latin-600.css";
+@import "@fontsource/manrope/latin-700.css";
+
+/* Sistema de diseño de Umbral: papel y concreto, tinta grafito, ladrillo solo para la acción */
+@theme {
+  --color-papel: #f3f1ec;
+  --color-papel-2: #e9e5dd;
+  --color-concreto: #d6d0c4;
+  --color-tinta: #1d2125;
+  --color-tinta-2: #2f353a;
+  --color-gris: #5c6166;
+  --color-ladrillo: #a3452a;
+  --color-ladrillo-2: #86361f;
+  --color-ok: #2f6a48;
+
+  --font-titular: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Manrope', system-ui, sans-serif;
+
+  --radius-campo: 6px;
+  --radius-tarjeta: 10px;
+  --ease-salida: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { background: var(--color-papel); color: var(--color-tinta); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 3px solid var(--color-ladrillo); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer components {
+  .contenedor { width: min(100% - 32px, 1240px); margin-inline: auto; }
+  @media (min-width: 768px) { .contenedor { width: min(100% - 64px, 1240px); } }
+  .titular { font-family: var(--font-titular); font-weight: 400; line-height: 1; letter-spacing: -0.01em; }
+  .cifra { font-variant-numeric: tabular-nums; }
+  .rotulo { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-gris); }
+  .boton {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 50px; padding: 0 22px; border-radius: var(--radius-campo);
+    font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.2s var(--ease-salida);
+  }
+  .boton:active { transform: scale(0.98); }
+  .boton--ladrillo { background: var(--color-ladrillo); color: #fff; }
+  .boton--ladrillo:hover { background: var(--color-ladrillo-2); }
+  .boton--linea { border: 1px solid var(--color-tinta); color: var(--color-tinta); }
+  .boton--linea:hover { background: var(--color-tinta); color: var(--color-papel); }
+  .boton--tinta { background: var(--color-tinta); color: var(--color-papel); }
+  .boton--tinta:hover { background: var(--color-tinta-2); }
+  .campo {
+    width: 100%; min-height: 48px; padding: 0 12px; border-radius: var(--radius-campo);
+    border: 1px solid var(--color-concreto); background: #fff; color: var(--color-tinta); font: inherit;
+  }
+  .campo:focus-visible { outline-offset: 0; }
+  .solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* Edificio de la portada: las líneas se dibujan una vez al cargar */
+  .trazo { stroke-dasharray: var(--largo, 600); stroke-dashoffset: var(--largo, 600); animation: dibujar 1.6s var(--ease-salida) forwards; animation-delay: var(--retraso, 0s); }
+  @keyframes dibujar { to { stroke-dashoffset: 0; } }
+  @media (prefers-reduced-motion: reduce) { .trazo { stroke-dashoffset: 0; animation: none; } }
+}
