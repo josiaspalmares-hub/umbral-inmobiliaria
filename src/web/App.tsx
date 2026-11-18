@@ -5,15 +5,20 @@ import { cn } from '@/lib/utils'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ComoTrabajamos, Contacto, Pie } from './Abajo'
+import { Obra } from './Obra'
 import { Portada } from './Portada'
 import { Preventa } from './Preventa'
 import { Propiedades } from './Propiedades'
 import { Vender } from './Vender'
 import { Zonas } from './Zonas'
+import { logoSVG } from '@/lib/marca'
+
+const LOGO = logoSVG()
 
 const ENLACES = [
-  { href: '#propiedades', texto: 'Propiedades' },
-  { href: '#preventa', texto: 'Torre Umbral' },
+  { href: '#obra', texto: 'La torre' },
+  { href: '#preventa', texto: 'Elige tu piso' },
+  { href: '#propiedades', texto: 'Disponibles' },
   { href: '#zonas', texto: 'Zonas' },
   { href: '#vender', texto: 'Vender' },
 ]
@@ -38,7 +43,7 @@ export function App() {
       <a href="#contenido" className="solo-lector focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-tinta focus:p-3 focus:text-papel">Saltar al contenido</a>
       <header className={cn('fixed inset-x-0 top-0 z-30 transition-[background-color,box-shadow] duration-300', solido || menu ? 'bg-papel/95 shadow-[0_1px_0_var(--color-concreto)] backdrop-blur-sm' : 'bg-transparent')}>
         <div className="contenedor flex h-16 items-center justify-between gap-4">
-          <a href="#" className="titular text-[2rem]" aria-label="Umbral, inicio">Umbral</a>
+          <a href="#" className="flex items-center gap-2.5" aria-label="Umbral, inicio"><span className="inline-block w-7" aria-hidden="true" dangerouslySetInnerHTML={{ __html: LOGO }} /><span className="text-lg font-extrabold tracking-[0.2em]">UMBRAL</span></a>
           <nav aria-label="Secciones" className="hidden gap-7 md:flex">
             {ENLACES.map((e) => <a key={e.href} href={e.href} className="font-semibold text-tinta-2 hover:text-tinta hover:underline underline-offset-4">{e.texto}</a>)}
           </nav>
@@ -59,8 +64,9 @@ export function App() {
       </header>
       <main id="contenido">
         <Portada filtros={filtros} cambiar={setFiltros} buscar={buscar} />
-        <Propiedades filtros={filtros} cambiar={setFiltros} tasa={tasa} />
+        <Obra />
         <Preventa tasa={tasa} />
+        <Propiedades filtros={filtros} cambiar={setFiltros} tasa={tasa} />
         <Zonas />
         <Vender />
         <ComoTrabajamos />

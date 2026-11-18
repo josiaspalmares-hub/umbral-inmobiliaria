@@ -1,8 +1,14 @@
 import { PRECIO_M2, ZONAS } from '@/datos'
+import { curvasSVG } from '@/lib/marca'
 import { dolares } from '@/lib/moneda'
 import { useState } from 'react'
 
 const TAMANOS = [55, 80, 110]
+const CURVAS = curvasSVG(800, 600, 16)
+// Posición aproximada de cada zona en el mapa (el Ávila arriba)
+const PINES: Record<string, [number, number]> = {
+  'Lomas del Ávila': [82, 16], 'Los Palos Grandes': [58, 33], Altamira: [40, 54], 'La Castellana': [20, 32], 'El Hatillo': [66, 82],
+}
 
 export function Zonas() {
   const [m2, setM2] = useState(80)
@@ -12,7 +18,7 @@ export function Zonas() {
     <section id="zonas" className="scroll-mt-16 py-16 md:py-24" aria-labelledby="zonas-titulo">
       <div className="contenedor grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
         <div>
-          <h2 id="zonas-titulo" className="titular text-5xl md:text-6xl">¿Cuánto cuesta vivir en cada zona?</h2>
+          <h2 id="zonas-titulo" className="leading-none"><span className="fuerte block text-4xl md:text-5xl">Cada zona,</span><span className="titular block text-4xl italic text-ladrillo md:text-6xl">a su precio.</span></h2>
           <p className="mt-4 text-lg text-tinta-2">Precio promedio del metro cuadrado en venta, para que sepas si una oferta está en lo normal antes de visitar.</p>
           <fieldset className="mt-8 min-w-0">
             <legend className="rotulo mb-3">Calcular para un apartamento de</legend>
@@ -25,6 +31,16 @@ export function Zonas() {
               ))}
             </div>
           </fieldset>
+          <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-[var(--radius-tarjeta)] bg-white text-concreto [&_svg]:absolute [&_svg]:inset-0 [&_svg]:h-full [&_svg]:w-full" aria-hidden="true">
+            <div dangerouslySetInnerHTML={{ __html: CURVAS }} />
+            <span className="dato absolute top-3 left-3 text-ok">El Ávila ↑</span>
+            {ZONAS.map((z) => (
+              <span key={z} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: `${PINES[z][0]}%`, top: `${PINES[z][1]}%` }}>
+                <span className="dato block rounded-full bg-tinta px-2 py-1 whitespace-nowrap text-papel">{dolares(PRECIO_M2[z].m2 * m2)}</span>
+                <span className="mt-1 block text-[0.7rem] font-semibold whitespace-nowrap text-tinta">{z}</span>
+              </span>
+            ))}
+          </div>
         </div>
         <table className="w-full text-left">
           <caption className="solo-lector">Precio promedio por metro cuadrado y precio estimado de un apartamento de {m2} m² por zona</caption>

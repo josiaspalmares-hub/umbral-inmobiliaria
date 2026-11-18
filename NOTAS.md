@@ -15,6 +15,21 @@
 - **Plan de pagos sin crédito:** en Venezuela casi no hay hipotecas; la preventa se paga con inicial y cuotas hasta
   la entrega (`lib/torre.ts`).
 
+## Versión 2 (18-nov-2026)
+
+- Identidad nueva: hormigón, grafito, arcilla y atardecer; Cormorant Garamond + Manrope + IBM Plex Mono; logo de
+  una puerta hecha de cubos (`lib/marca.ts`) y curvas de nivel del Ávila de fondo.
+- Orden: Portada → Mírala crecer → Elige tu piso → Disponibles → Zonas → Vender → Cómo trabajamos → Contacto.
+- **Mírala crecer** (`Obra.tsx`): 60 cuadros del video de Gemini en un canvas fijo que avanza con el scroll. Tres
+  juegos: `obra-video/tel` (vertical), `pc` (1280) y `hd` (1600, mejorado con Real-ESRGAN al 60 % + original). Si
+  falta un cuadro HD usa el normal. Las etapas cambian según el momento del video (`LIMITES`).
+- **Elige tu piso** (`TorreVuelta.tsx`): dos tomas de dron unidas (izquierda invertida + derecha) en 59 cuadros.
+  Gira sola, se arrastra, y el piso se dibuja encima con polígonos calculados desde 6 cuadros clave medidos a mano
+  (`CLAVES`). La foto muestra 8 pisos: los datos son 8 pisos y 32 apartamentos.
+- Se probó una torre de cubos en Three.js (`src/torre/`, se ve en el borrador local) y se descartó en la web porque
+  se veía falsa; `torre/modelo.ts` solo aporta las etapas.
+- Guiones de Gemini en `guion-video-gemini.md`.
+
 ## Archivos
 
 - `src/datos.ts`: propiedades, zonas, precios por m² y preguntas (todo de muestra).
@@ -34,7 +49,7 @@
 
 - Teléfono (375 px) y PC (1280 px) sin scroll horizontal; ficha, favoritas, filtros, torre y formulario probados.
 - axe: sin errores después de corregir el nombre repetido de los dos buscadores.
-- 4G lenta + CPU 4 veces más lenta: el titular aparece en 1,66 s; el 3D no se descarga al inicio.
+- 4G lenta + CPU 4 veces más lenta: el titular aparece en 1,67 s; los videos solo bajan al acercarse.
 - Con "menos movimiento": sale el dibujo SVG; el botón "Ver en 3D" lo activa sin giro automático.
 
 ## Publicación

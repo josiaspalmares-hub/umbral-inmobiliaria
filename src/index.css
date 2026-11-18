@@ -1,24 +1,27 @@
 @import "tailwindcss";
-@import "@fontsource/instrument-serif/latin-400.css";
-@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource/cormorant-garamond/latin-500.css";
+@import "@fontsource/cormorant-garamond/latin-500-italic.css";
 @import "@fontsource/manrope/latin-400.css";
 @import "@fontsource/manrope/latin-600.css";
-@import "@fontsource/manrope/latin-700.css";
+@import "@fontsource/manrope/latin-800.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
 
-/* Sistema de diseño de Umbral: papel y concreto, tinta grafito, ladrillo solo para la acción */
+/* Sistema de diseño de Umbral v2: hormigón, grafito, arcilla solo en la acción, atardecer en las luces */
 @theme {
-  --color-papel: #f3f1ec;
-  --color-papel-2: #e9e5dd;
-  --color-concreto: #d6d0c4;
-  --color-tinta: #1d2125;
-  --color-tinta-2: #2f353a;
-  --color-gris: #5c6166;
-  --color-ladrillo: #a3452a;
-  --color-ladrillo-2: #86361f;
-  --color-ok: #2f6a48;
+  --color-papel: #efebe4;
+  --color-papel-2: #e4ded4;
+  --color-concreto: #c9c2b6;
+  --color-tinta: #1b1d1f;
+  --color-tinta-2: #2a2d30;
+  --color-gris: #5c5f62;
+  --color-ladrillo: #a94a2b;
+  --color-ladrillo-2: #8a3b20;
+  --color-atardecer: #f2b36b;
+  --color-ok: #3f5a45;
 
-  --font-titular: 'Instrument Serif', Georgia, serif;
+  --font-titular: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   --radius-campo: 6px;
   --radius-tarjeta: 10px;
@@ -38,9 +41,11 @@
 @layer components {
   .contenedor { width: min(100% - 32px, 1240px); margin-inline: auto; }
   @media (min-width: 768px) { .contenedor { width: min(100% - 64px, 1240px); } }
-  .titular { font-family: var(--font-titular); font-weight: 400; line-height: 1; letter-spacing: -0.01em; }
+  .titular { font-family: var(--font-titular); font-weight: 500; line-height: 0.98; letter-spacing: -0.01em; }
+  .fuerte { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.03em; line-height: 0.9; text-transform: uppercase; }
+  .dato { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
   .cifra { font-variant-numeric: tabular-nums; }
-  .rotulo { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-gris); }
+  .rotulo { font-family: var(--font-mono); font-size: 0.76rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-gris); }
   .boton {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
     min-height: 50px; padding: 0 22px; border-radius: var(--radius-campo);
@@ -64,5 +69,6 @@
   /* Edificio de la portada: las líneas se dibujan una vez al cargar */
   .trazo { stroke-dasharray: var(--largo, 600); stroke-dashoffset: var(--largo, 600); animation: dibujar 1.6s var(--ease-salida) forwards; animation-delay: var(--retraso, 0s); }
   @keyframes dibujar { to { stroke-dashoffset: 0; } }
+  @keyframes aparecer { from { opacity: 0; transform: scale(1.02); } }
   @media (prefers-reduced-motion: reduce) { .trazo { stroke-dashoffset: 0; animation: none; } }
 }

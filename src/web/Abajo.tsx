@@ -1,5 +1,8 @@
 import { EMPRESA, PREGUNTAS } from '@/datos'
+import { logoSVG } from '@/lib/marca'
 import { Plus } from 'lucide-react'
+
+const LOGO_CLARO = logoSVG({ arriba: '#f2b36b', izq: '#b5532f', der: '#8a3b20' })
 
 const PASOS = [
   ['Eliges desde el teléfono', 'Filtras por zona y precio, ves fotos y el plano, y guardas las que te gustan.'],
@@ -85,16 +88,17 @@ export function Contacto() {
 export function Pie() {
   return (
     <footer className="bg-tinta text-papel">
-      <div className="contenedor grid gap-6 py-10 md:grid-cols-[1fr_auto] md:items-end">
+      <div className="contenedor grid gap-6 py-16 md:grid-cols-[1fr_auto] md:items-end md:py-24">
         <div>
-          <p className="titular text-4xl">Umbral</p>
+          <p className="leading-none"><span className="titular block text-4xl italic text-atardecer md:text-6xl">Tu próxima dirección</span><span className="fuerte block text-5xl md:text-8xl">empieza aquí.</span></p>
+          <p className="mt-8 flex items-center gap-3"><span className="inline-block w-10" aria-hidden="true" dangerouslySetInnerHTML={{ __html: LOGO_CLARO }} /><span className="text-2xl font-extrabold tracking-[0.18em]">UMBRAL</span></p>
           <p className="mt-3 max-w-xl text-papel/75">
             <strong className="text-papel">Proyecto de muestra.</strong> Umbral es una inmobiliaria ficticia hecha por{' '}
             <a className="underline underline-offset-2" href="https://josias-palmares.vercel.app" target="_blank" rel="noopener">Josías Palmares</a>{' '}
             para su portafolio. Propiedades, precios, personas y la Torre Umbral son de ejemplo.
           </p>
           <p className="mt-2 text-sm text-papel/65">
-            Fotos: <a className="underline" href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a> · Mapa: <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Tasa: <a className="underline" href="https://ve.dolarapi.com" target="_blank" rel="noopener">DolarApi</a>
+            Torre, interiores y videos: generados con IA (Gemini) · Fotos de propiedades: <a className="underline" href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a> · Mapa: <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Tasa: <a className="underline" href="https://ve.dolarapi.com" target="_blank" rel="noopener">DolarApi</a>
           </p>
         </div>
         <a className="underline-offset-4 hover:underline" href="/privacidad.html">Privacidad</a>

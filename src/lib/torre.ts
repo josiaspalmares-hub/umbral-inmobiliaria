@@ -9,8 +9,8 @@ export const TIPOS: Record<Tipo, { habitaciones: number; banos: number; m2: numb
   D: { habitaciones: 1, banos: 1, m2: 54, nota: 'Ideal para una persona o para alquilar' },
 }
 
-export const PRIMER_PISO = 2
-export const ULTIMO_PISO = 13
+export const PRIMER_PISO = 1
+export const ULTIMO_PISO = 8
 export const PISOS = Array.from({ length: ULTIMO_PISO - PRIMER_PISO + 1 }, (_, i) => PRIMER_PISO + i)
 
 const PRECIO_M2_BASE = 1250
@@ -19,7 +19,7 @@ const SUBE_POR_PISO = 14
 export type Unidad = { codigo: string; piso: number; tipo: Tipo; precio: number; vendido: boolean }
 
 // Vendidos fijos para que la muestra se vea igual en cada visita
-const VENDIDOS = new Set(['2A', '2D', '3B', '4A', '5C', '5D', '6B', '7A', '8D', '9B', '10A', '11C', '12A', '12B', '12C', '12D', '13A'])
+const VENDIDOS = new Set(['1A', '1D', '2B', '3A', '4C', '4D', '6B', '7A', '7B', '7C', '7D', '8A'])
 
 export function unidadesDelPiso(piso: number): Unidad[] {
   return (Object.keys(TIPOS) as Tipo[]).map((tipo) => {

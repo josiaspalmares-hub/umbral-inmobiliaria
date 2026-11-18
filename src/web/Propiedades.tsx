@@ -51,7 +51,7 @@ export function Propiedades({ filtros, cambiar, tasa }: Props) {
     <section id="propiedades" className="scroll-mt-20 border-t border-concreto py-16 md:py-24" aria-labelledby="propiedades-titulo">
       <div className="contenedor">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 id="propiedades-titulo" className="titular text-5xl md:text-6xl">Propiedades</h2>
+          <h2 id="propiedades-titulo" className="leading-none"><span className="fuerte block text-4xl md:text-6xl">Disponibles</span><span className="titular block text-4xl italic text-ladrillo md:text-6xl">hoy, con fotos y plano.</span></h2>
           <button
             type="button" aria-pressed={soloGuardadas} onClick={() => setSoloGuardadas((v) => !v)}
             className={cn('boton min-h-[44px] border px-4 text-[0.95rem]', soloGuardadas ? 'border-ladrillo bg-ladrillo text-white' : 'border-concreto hover:border-tinta')}
@@ -81,18 +81,24 @@ export function Propiedades({ filtros, cambiar, tasa }: Props) {
           </div>
         ) : (
           <ul className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {lista.map((p) => {
+            {lista.map((p, n) => {
               const guardada = guardadas.includes(p.id)
+              const destacada = n === 0 && lista.length > 2
               return (
-                <li key={p.id} className="group relative min-w-0">
+                <li key={p.id} className={cn('group relative min-w-0', destacada && 'sm:col-span-2 lg:row-span-2')}>
+                  {/* Galería editorial: la primera va grande; al pasar el mouse se ve otro ambiente */}
                   <div className="relative overflow-hidden rounded-[var(--radius-tarjeta)] bg-papel-2">
                     <img
                       src={foto(p.foto, 640)} srcSet={`${foto(p.foto, 640)} 640w, ${foto(p.foto, 1200)} 1200w`}
-                      sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+                      sizes={destacada ? '(min-width: 1024px) 800px, 100vw' : '(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw'}
                       alt="" width={640} height={480} loading="lazy" decoding="async"
-                      className="aspect-[4/3] w-full object-cover transition-transform duration-500 ease-[var(--ease-salida)] group-hover:scale-[1.03]"
+                      className={cn('w-full object-cover transition-transform duration-700 ease-[var(--ease-salida)] group-hover:scale-[1.04]', destacada ? 'aspect-[4/3] lg:aspect-[16/11]' : 'aspect-[4/3]')}
                     />
-                    <span className="absolute bottom-3 left-3 rounded-[4px] bg-papel/95 px-2 py-1 text-xs font-bold text-tinta">{p.zona}</span>
+                    <img
+                      src={foto(p.fotos[1], 640)} alt="" width={640} height={480} loading="lazy" decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    />
+                    <span className="dato absolute bottom-3 left-3 rounded-[4px] bg-papel/95 px-2 py-1 text-tinta">{p.zona}</span>
                   </div>
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <Precio p={p} tasa={tasa} />

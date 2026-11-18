@@ -28,3 +28,7 @@ dist-ssr
 .env*
 
 .vercel
+
+# Borrador de diseño (solo local)
+borrador.html
+src/borrador/

@@ -1,52 +1,52 @@
 import { abrirMensaje } from '@/lib/mensaje'
 import { bolivares, dolares, type EstadoTasa } from '@/lib/moneda'
 import {
-  disponiblesEnPiso, MESES_HASTA_ENTREGA, PISOS, PRIMER_PISO, planDePagos, TIPOS, ULTIMO_PISO, unidadesDelPiso,
+  disponiblesEnPiso, MESES_HASTA_ENTREGA, PISOS, planDePagos, TIPOS, unidadesDelPiso,
 } from '@/lib/torre'
 import { cn } from '@/lib/utils'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Edificio } from './Edificio'
+import { useCallback, useMemo, useState } from 'react'
+import { TorreVuelta } from './TorreVuelta'
 import { Plano } from './Plano'
 
-const Torre3D = lazy(() => import('./Torre3D'))
-
-const NIVELES = ULTIMO_PISO + 1 // planta baja (0) hasta el último piso
 const INICIALES = [20, 30, 40]
-const agotados = PISOS.filter((p) => disponiblesEnPiso(p) === 0)
-const elegible = (i: number) => i >= PRIMER_PISO && i <= ULTIMO_PISO
 
-// El 3D solo en equipos que lo aguantan; el resto ve el dibujo en SVG
-const hayWebGL = () => {
-  const prueba = document.createElement('canvas')
-  return Boolean(prueba.getContext('webgl2') ?? prueba.getContext('webgl'))
-}
+// Imágenes de referencia de la Torre Umbral (las mismas terminaciones en todos los apartamentos)
+const GALERIA = [
+  { id: 'plano', texto: 'Plano en 3D, amueblado' },
+  { id: 'sala', texto: 'Sala y comedor con vista al Ávila' },
+  { id: 'cocina', texto: 'Cocina abierta con isla' },
+  { id: 'cuarto', texto: 'Habitación principal' },
+  { id: 'esquina', texto: 'La torre en la esquina, con El Ávila' },
+]
 
-function puede3D() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false
-  const red = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
-  if (red?.saveData || /2g/.test(red?.effectiveType ?? '')) return false
-  if ((navigator.hardwareConcurrency ?? 4) < 4) return false
-  return hayWebGL()
+function Galeria() {
+  const [vista, setVista] = useState(0)
+  const actual = GALERIA[vista]
+  return (
+    <div>
+      <figure className="relative overflow-hidden rounded-[6px] bg-papel">
+        <img key={actual.id} src={`/img/umbral/${actual.id}-1280.webp`} srcSet={`/img/umbral/${actual.id}-640.webp 640w, /img/umbral/${actual.id}-1280.webp 1280w`}
+          sizes="(min-width: 1024px) 600px, 92vw" alt={actual.texto} width={1280} height={714} loading="lazy"
+          className="aspect-[16/9] w-full object-cover motion-safe:animate-[aparecer_0.5s_var(--ease-salida)]" />
+        <figcaption className="dato absolute bottom-2 left-2 rounded-[4px] bg-tinta/80 px-2 py-1 text-papel">{actual.texto}</figcaption>
+      </figure>
+      <div className="mt-2 grid grid-cols-5 gap-2" role="group" aria-label="Elegir imagen del apartamento">
+        {GALERIA.map((g, k) => (
+          <button key={g.id} type="button" onClick={() => setVista(k)} aria-pressed={k === vista} aria-label={g.texto}
+            className={cn('overflow-hidden rounded-[4px]', k === vista ? 'ring-2 ring-ladrillo ring-offset-2' : 'opacity-70 hover:opacity-100')}>
+            <img src={`/img/umbral/${g.id}-640.webp`} alt="" width={640} height={357} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-gris">Imágenes de referencia de la torre y sus terminaciones. La distribución exacta de tu apartamento está abajo.</p>
+    </div>
+  )
 }
 
 export function Preventa({ tasa }: { tasa: EstadoTasa }) {
   const [piso, setPiso] = useState(6)
   const [codigo, setCodigo] = useState('6A')
   const [inicialPct, setInicialPct] = useState(30)
-  const [modo3D, setModo3D] = useState(false)
-  const [cerca, setCerca] = useState(false)
-  const caja = useRef<HTMLDivElement>(null)
-
-  useEffect(() => { setModo3D(puede3D()) }, [])
-
-  // El 3D se descarga cuando la sección se acerca a la pantalla
-  useEffect(() => {
-    const el = caja.current
-    if (!el) return
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setCerca(true); io.disconnect() } }, { rootMargin: '400px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
 
   const unidades = useMemo(() => unidadesDelPiso(piso), [piso])
   const unidad = unidades.find((u) => u.codigo === codigo) ?? unidades.find((u) => !u.vendido)
@@ -57,41 +57,24 @@ export function Preventa({ tasa }: { tasa: EstadoTasa }) {
     const libre = unidadesDelPiso(p).find((u) => !u.vendido)
     setCodigo(libre?.codigo ?? '')
   }, [])
-  const sinWebGL = useCallback(() => setModo3D(false), [])
   const bs = (n: number) => (tasa.tasa ? bolivares(n, tasa.tasa) : tasa.fallo ? 'Bs no disponible' : 'Calculando…')
 
   return (
     <section id="preventa" className="scroll-mt-16 bg-papel-2 py-16 md:py-24" aria-labelledby="preventa-titulo">
       <div className="contenedor">
         <p className="rotulo">Preventa · entrega en noviembre de 2028</p>
-        <h2 id="preventa-titulo" className="titular mt-3 max-w-3xl text-5xl md:text-7xl">Torre Umbral: elige el piso y mira tu apartamento.</h2>
-        <p className="mt-4 max-w-2xl text-lg text-tinta-2">
-          48 apartamentos en Los Palos Grandes. Sin crédito bancario: pagas una inicial y el resto en {MESES_HASTA_ENTREGA} cuotas mientras se construye.
+        <h2 id="preventa-titulo" className="mt-3 max-w-4xl leading-none"><span className="fuerte block text-4xl md:text-6xl">Elige tu piso.</span><span className="titular block text-4xl italic text-ladrillo md:text-6xl">Mira tu apartamento por dentro.</span></h2>
+        <p className="mt-5 max-w-2xl text-lg text-tinta-2">
+          32 apartamentos en 8 pisos, en Los Palos Grandes. Sin crédito bancario: pagas una inicial y el resto en {MESES_HASTA_ENTREGA} cuotas mientras se construye.
         </p>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-          <div ref={caja} className="relative min-w-0">
-            <div className="relative mx-auto aspect-square w-full max-w-[460px] sm:aspect-[4/5]">
-              {modo3D && cerca ? (
-                <Suspense fallback={<Edificio pisos={NIVELES} resaltado={piso} agotados={agotados} className="mx-auto h-full w-auto" />}>
-                  <Torre3D niveles={NIVELES} elegibles={elegible} agotados={agotados} seleccionado={piso} alElegir={elegirPiso} alFallar={sinWebGL} />
-                </Suspense>
-              ) : (
-                <Edificio pisos={NIVELES} resaltado={piso} agotados={agotados} alElegir={(i) => elegible(i) && elegirPiso(i)} className="mx-auto h-full w-auto" />
-              )}
-            </div>
-            <p className="mt-2 text-center text-sm text-gris">
-              {modo3D ? 'Arrastra para girar la torre y toca un piso.' : 'Toca un piso en el dibujo o en la lista.'}{' '}
-              <button type="button" className="font-semibold text-tinta underline underline-offset-2" onClick={() => setModo3D((v) => !v && hayWebGL())}>
-                {modo3D ? 'Ver dibujo simple' : 'Ver en 3D'}
-              </button>
-            </p>
-          </div>
+        <div className="mt-10"><TorreVuelta piso={piso} alElegir={elegirPiso} /></div>
 
-          <div className="min-w-0">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
             <fieldset className="min-w-0">
               <legend className="rotulo mb-3">Piso</legend>
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+              <div className="grid grid-cols-4 gap-2">
                 {PISOS.map((p) => {
                   const libres = disponiblesEnPiso(p)
                   return (
@@ -128,11 +111,14 @@ export function Preventa({ tasa }: { tasa: EstadoTasa }) {
                 })}
               </div>
             </fieldset>
+          </div>
 
+          <div className="min-w-0">
             {unidad && plan ? (
-              <div className="mt-6 rounded-[var(--radius-tarjeta)] bg-white p-4 md:p-6" aria-live="polite">
+              <div className="rounded-[var(--radius-tarjeta)] bg-white p-4 md:p-6" aria-live="polite">
                 <div className="grid gap-5">
-                  <Plano tipo={unidad.tipo} className="mx-auto w-full max-w-[460px]" />
+                  <Galeria />
+                  <Plano tipo={unidad.tipo} className="mx-auto w-full max-w-[420px]" />
                   <div>
                     <p className="titular text-4xl">Apartamento {unidad.codigo}</p>
                     <p className="mt-1 text-tinta-2">{TIPOS[unidad.tipo].nota}.</p>
@@ -172,7 +158,7 @@ export function Preventa({ tasa }: { tasa: EstadoTasa }) {
                 <p className="mt-3 text-xs text-gris">Cuotas sin intereses, calculadas a {MESES_HASTA_ENTREGA} meses. Precios de muestra.</p>
               </div>
             ) : (
-              <div className="mt-6 rounded-[var(--radius-tarjeta)] border border-dashed border-concreto bg-white p-6">
+              <div className="rounded-[var(--radius-tarjeta)] border border-dashed border-concreto bg-white p-6">
                 <p className="titular text-3xl">El piso {piso} ya se vendió completo.</p>
                 <p className="mt-2 text-tinta-2">Elige otro piso o pide que te avisemos si alguien libera un apartamento.</p>
                 <button type="button" className="boton boton--linea mt-4" onClick={() => abrirMensaje(`Hola Umbral, quiero un apartamento en el piso ${piso} de la Torre Umbral si se libera alguno.`)}>Avísenme</button>
