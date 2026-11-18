@@ -71,4 +71,10 @@
   @keyframes dibujar { to { stroke-dashoffset: 0; } }
   @keyframes aparecer { from { opacity: 0; transform: scale(1.02); } }
   @media (prefers-reduced-motion: reduce) { .trazo { stroke-dashoffset: 0; animation: none; } }
+
+  /* Bombillo del piso elegido en la torre */
+  .bombillo { position: relative; width: 14px; height: 14px; border-radius: 50%; background: #ffe2b0; box-shadow: 0 0 0 3px rgba(242, 179, 107, 0.55), 0 0 18px 6px rgba(242, 179, 107, 0.75); }
+  .bombillo::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid #f2b36b; animation: latir 1.8s ease-out infinite; }
+  @keyframes latir { from { transform: scale(0.6); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .bombillo::after { animation: none; opacity: 0; } }
 }
