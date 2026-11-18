@@ -23,7 +23,13 @@ function cargarCuadros(carpeta: 'hd' | 'pc' | 'tel', pocos: boolean, alCargar: (
     if (i === undefined) return
     const img = new Image()
     img.decoding = 'async'
-    img.onload = () => { lista[i] = img; alCargar(); bajar() }
+    // Se decodifica en segundo plano antes de usarla; así dibujarla no congela la pantalla
+    img.onload = () => {
+      img.decode().then(
+        () => { lista[i] = img; alCargar(); bajar() },
+        (error: Error) => { console.warn(`No se pudo preparar el cuadro ${i + 1}:`, error.message); lista[i] = img; alCargar(); bajar() },
+      )
+    }
     const archivo = (c: string) => `/img/obra-video/${c}/${String(i + 1).padStart(2, '0')}.webp`
     // Si falta el cuadro HD, se usa el normal; nunca queda la pantalla en negro
     img.onerror = () => {
@@ -48,7 +54,10 @@ function cercano(lista: (HTMLImageElement | null)[], i: number) {
 export function Obra() {
   const caja = useRef<HTMLElement>(null)
   const lienzo = useRef<HTMLCanvasElement>(null)
-  const [t, setT] = useState(0)
+  const barra = useRef<HTMLElement>(null)
+  const final = useRef<HTMLImageElement>(null)
+  // Solo se vuelve a pintar el texto cuando cambia el porcentaje o la etapa, no en cada cuadro
+  const [pct, setPct] = useState(0)
 
   useEffect(() => {
     const el = caja.current
@@ -59,14 +68,22 @@ export function Obra() {
     let cuadros: (HTMLImageElement | null)[] = []
     let progreso = 0
     let pendiente = false
+    let dibujado: HTMLImageElement | null = null
+    let tamano = ''
 
     const dibujar = () => {
       pendiente = false
       const recorrido = el.offsetHeight - innerHeight
       progreso = Math.min(Math.max(-el.getBoundingClientRect().top / recorrido, 0), 1)
-      setT(progreso)
+      setPct(Math.round(progreso * 100))
+      if (barra.current) barra.current.style.transform = `scaleX(${progreso})`
+      if (final.current) final.current.style.opacity = String(Math.min(Math.max((progreso - FIN_VIDEO) / (1 - FIN_VIDEO - 0.04), 0), 1))
       const img = cercano(cuadros, Math.round(Math.min(progreso / FIN_VIDEO, 1) * (CUADROS - 1)))
-      if (!img) return
+      // Si el cuadro es el mismo que ya está en pantalla, no se vuelve a dibujar
+      const clave = `${canvas.width}x${canvas.height}`
+      if (!img || (img === dibujado && clave === tamano)) return
+      dibujado = img
+      tamano = clave
       const { width: w, height: h } = canvas
       const escala = Math.max(w / img.naturalWidth, h / img.naturalHeight) // como object-fit: cover
       const dw = img.naturalWidth * escala
@@ -78,7 +95,7 @@ export function Obra() {
 
     const ajustar = () => {
       const r = canvas.getBoundingClientRect()
-      const dpr = Math.min(devicePixelRatio, 2)
+      const dpr = Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)
       canvas.width = Math.round(r.width * dpr)
       canvas.height = Math.round(r.height * dpr)
       pedir()
@@ -91,7 +108,8 @@ export function Obra() {
       const red = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
       const pocos = Boolean(red?.saveData || /2g|3g/.test(red?.effectiveType ?? ''))
       // Teléfono: cuadros verticales livianos; pantalla grande (1600 px o más con buena red): versión HD
-      const carpeta = matchMedia('(max-width: 767px)').matches ? 'tel' : innerWidth * Math.min(devicePixelRatio, 2) >= 1600 && !pocos ? 'hd' : 'pc'
+      const vertical = innerHeight > innerWidth
+      const carpeta = vertical ? 'tel' : innerWidth * Math.min(devicePixelRatio, 2) >= 1600 && !pocos ? 'hd' : 'pc'
       cuadros = cargarCuadros(carpeta, pocos, pedir)
     }, { rootMargin: '1200px 0px' })
     io.observe(el)
@@ -103,19 +121,19 @@ export function Obra() {
     return () => { io.disconnect(); ro.disconnect(); removeEventListener('scroll', pedir) }
   }, [])
 
+  const t = pct / 100
   const i = etapaEn(t)
-  const final = Math.min(Math.max((t - FIN_VIDEO) / (1 - FIN_VIDEO - 0.04), 0), 1)
 
   return (
     <section ref={caja} id="obra" className="relative h-[600vh] bg-tinta text-papel" aria-labelledby="obra-titulo">
       <div className="sticky top-0 h-[100svh] overflow-hidden">
         <canvas ref={lienzo} className="absolute inset-0 h-full w-full" aria-hidden="true" />
         <picture>
-          <source media="(max-width: 767px)" srcSet="/img/umbral/torre-alta-540.webp 540w, /img/umbral/torre-alta-900.webp 900w" sizes="100vw" />
+          <source media="(orientation: portrait)" srcSet="/img/umbral/torre-alta-540.webp 540w, /img/umbral/torre-alta-900.webp 900w" sizes="100vw" />
           <img
             src="/img/umbral/esquina-1280.webp" srcSet="/img/umbral/esquina-1280.webp 1280w, /img/umbral/esquina-1920.webp 1920w" sizes="100vw"
-            alt="" loading="lazy" decoding="async" width={1920} height={1072}
-            className="absolute inset-0 h-full w-full object-cover" style={{ opacity: final }}
+            ref={final} alt="" loading="lazy" decoding="async" width={1920} height={1072}
+            className="absolute inset-0 h-full w-full object-cover opacity-0"
           />
         </picture>
         {/* Degradado para que el texto se lea sobre el video */}
@@ -126,8 +144,8 @@ export function Obra() {
           <p className="dato mt-4 text-base text-atardecer" aria-hidden="true">{String(i + 1).padStart(2, '0')} / 06</p>
           <p className="titular mt-1 text-5xl italic md:text-7xl" aria-live="polite">{ETAPAS[i].nombre}</p>
           <p className="mt-3 max-w-[34ch] text-[#e6e1d8] md:min-h-[3.4em] md:text-lg">{ETAPAS[i].texto}</p>
-          <p className="dato mt-5 text-concreto">Avance de obra <b className="ml-1 font-sans text-2xl text-papel">{Math.round(t * 100)} %</b></p>
-          <div className="mt-3 h-[3px] w-full max-w-[360px] bg-papel/20"><i className="block h-full bg-ladrillo" style={{ width: `${t * 100}%` }} /></div>
+          <p className="dato mt-5 text-concreto">Avance de obra <b className="ml-1 font-sans text-2xl text-papel">{pct} %</b></p>
+          <div className="mt-3 h-[3px] w-full max-w-[360px] bg-papel/20"><i ref={barra} className="block h-full origin-left scale-x-0 bg-ladrillo" /></div>
           <ol className="dato mt-6 hidden gap-1.5 md:grid">
             {ETAPAS.map((e, k) => (
               <li key={e.nombre} className={cn(k === i ? 'text-papel' : k < i ? 'text-concreto' : 'text-papel/40')}>{String(k + 1).padStart(2, '0')} {e.nombre}</li>

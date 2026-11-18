@@ -55,7 +55,8 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
     const s = estado.current
-    const carpeta = innerWidth * Math.min(devicePixelRatio, 2) >= 1400 ? 'hd' : 'sd'
+    const tactil = matchMedia('(pointer: coarse)').matches
+    const carpeta = !tactil && innerWidth * Math.min(devicePixelRatio, 2) >= 1400 ? 'hd' : 'sd'
     const imgs: (HTMLImageElement | null)[] = Array(CUADROS).fill(null)
     let vivo = true
     // Primero el cuadro de frente, luego los más cercanos a él
@@ -65,11 +66,19 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       const k = orden[siguiente++]
       if (k === undefined || !vivo) return
       const img = new Image()
-      img.onload = () => { imgs[k] = img; if (vivo) { setListos((n) => n + 1); pedir() } bajar() }
+      // Decodificada en segundo plano antes de mostrarla, para que arrastrar no se trabe
+      const lista = () => { imgs[k] = img; if (vivo) { setListos((n) => n + 1); pedir() } bajar() }
+      img.onload = () => img.decode().then(lista, (error: Error) => { console.warn(`No se pudo preparar el cuadro ${k}:`, error.message); lista() })
       img.onerror = () => { console.warn(`No cargó el cuadro ${k} de la vuelta`); bajar() }
       img.src = ruta(carpeta, k)
     }
-    for (let n = 0; n < 4; n++) bajar()
+    // Empieza a bajar los cuadros cuando la sección se acerca a la pantalla
+    const cerca = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return
+      cerca.disconnect()
+      for (let n = 0; n < 4; n++) bajar()
+    }, { rootMargin: '900px 0px' })
+    cerca.observe(canvas)
 
     // Encuadre: en pantallas angostas se recorta en vertical siguiendo al edificio
     const ventana = (bordes: [Borde, Borde, Borde]) => {
@@ -116,7 +125,7 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     s.pedir = pedir
     const ajustar = () => {
       const r = canvas.getBoundingClientRect()
-      const dpr = Math.min(devicePixelRatio, 2)
+      const dpr = Math.min(devicePixelRatio, tactil ? 1.5 : 2)
       canvas.width = Math.round(r.width * dpr)
       canvas.height = Math.round(r.height * dpr)
       pedir()
@@ -156,6 +165,7 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     return () => {
       vivo = false
       cancelAnimationFrame(cuadro)
+      cerca.disconnect()
       ro.disconnect()
       canvas.removeEventListener('pointerdown', bajarDedo)
       canvas.removeEventListener('pointermove', mover)

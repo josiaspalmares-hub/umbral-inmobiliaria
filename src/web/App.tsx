@@ -41,7 +41,7 @@ export function App() {
   return (
     <>
       <a href="#contenido" className="solo-lector focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-tinta focus:p-3 focus:text-papel">Saltar al contenido</a>
-      <header className={cn('fixed inset-x-0 top-0 z-30 transition-[background-color,box-shadow] duration-300', solido || menu ? 'bg-papel/95 shadow-[0_1px_0_var(--color-concreto)] backdrop-blur-sm' : 'bg-transparent')}>
+      <header className={cn('fixed inset-x-0 top-0 z-30 transition-[background-color,box-shadow] duration-300', solido || menu ? 'bg-papel shadow-[0_1px_0_var(--color-concreto)]' : 'bg-transparent')}>
         <div className="contenedor flex h-16 items-center justify-between gap-4">
           <a href="#" className="flex items-center gap-2.5" aria-label="Umbral, inicio"><span className="inline-block w-7" aria-hidden="true" dangerouslySetInnerHTML={{ __html: LOGO }} /><span className="text-lg font-extrabold tracking-[0.2em]">UMBRAL</span></a>
           <nav aria-label="Secciones" className="hidden gap-7 md:flex">
