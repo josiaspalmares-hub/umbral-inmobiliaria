@@ -8,35 +8,44 @@ const ALTO_VIDEO = 720
 const ULTIMO = PISOS.length // 8 pisos de apartamentos
 const FRENTE = 40 // cuadro donde la torre se ve de frente: ahí empieza
 
-type Borde = [x: number, arriba: number, abajo: number] // arriba = techo del piso 8, abajo = piso del 1
-type Clave = { cuadro: number; bordes: [Borde, Borde, Borde] } // izquierda, esquina, derecha
+// Cada cara: [x izquierda, x derecha, techo del piso 8 a la izq., piso del 1 a la izq., techo a la der., piso a la der.]
+type Cara = [xa: number, xb: number, ta: number, ba: number, tb: number, bb: number]
+type Clave = { cuadro: number; caras: [Cara, Cara] }
 
-// Medidos con zoom sobre el video unido (1280 × 720): borde, techo del piso 8 y piso del 1, en cada cara
+// Losas ajustadas automáticamente sobre el concreto en 13 cuadros del video unido (1280 × 720) y revisadas a la vista
 const CLAVES: Clave[] = [
-  { cuadro: 0, bordes: [[330, 128, 512], [720, 92, 527], [870, 130, 530]] },
-  { cuadro: 30, bordes: [[440, 158, 505], [650, 90, 553], [925, 118, 548]] },
-  { cuadro: 60, bordes: [[515, 64, 550], [520, 64, 550], [865, 66, 540]] },
-  { cuadro: 79, bordes: [[465, 79, 554], [800, 79, 554], [825, 85, 548]] },
-  { cuadro: 100, bordes: [[410, 105, 527], [685, 60, 545], [870, 148, 500]] },
-  { cuadro: 117, bordes: [[405, 118, 540], [560, 70, 555], [905, 140, 532]] },
+  { cuadro: 0, caras: [[435, 720, 114, 555, 81, 549], [720, 870, 73, 556, 135, 528]] },
+  { cuadro: 10, caras: [[470, 708, 117, 529, 79, 557], [708, 900, 65, 562, 132, 527]] },
+  { cuadro: 20, caras: [[500, 680, 90, 539, 79, 558], [680, 915, 60, 565, 122, 531]] },
+  { cuadro: 30, caras: [[495, 650, 102, 536, 78, 558], [650, 925, 96, 565, 137, 538]] },
+  { cuadro: 40, caras: [[505, 610, 78, 542, 78, 558], [610, 905, 54, 567, 100, 541]] },
+  { cuadro: 50, caras: [[510, 560, 86, 545, 76, 555], [560, 885, 62, 562, 84, 548]] },
+  { cuadro: 60, caras: [[515, 520, 64, 550, 64, 550], [520, 865, 70, 556, 72, 555]] },
+  { cuadro: 70, caras: [[490, 690, 74, 553, 69, 557], [690, 840, 61, 563, 66, 556]] },
+  { cuadro: 79, caras: [[465, 800, 70, 557, 65, 557], [800, 825, 79, 554, 85, 548]] },
+  { cuadro: 90, caras: [[436, 740, 91, 546, 56, 560], [740, 849, 61, 563, 113, 529]] },
+  { cuadro: 100, caras: [[410, 685, 100, 545, 53, 555], [685, 870, 51, 562, 175, 511]] },
+  { cuadro: 110, caras: [[407, 611, 109, 544, 50, 558], [611, 891, 50, 567, 163, 517]] },
+  { cuadro: 117, caras: [[405, 560, 133, 534, 44, 568], [560, 905, 62, 562, 142, 532]] },
 ]
 
-function bordesEn(cuadroVideo: number): [Borde, Borde, Borde] {
+function carasEn(cuadroVideo: number): [Cara, Cara] {
   const k = CLAVES.findIndex((c) => c.cuadro >= cuadroVideo)
-  if (k <= 0) return CLAVES[Math.max(k, 0)].bordes
+  if (k <= 0) return CLAVES[Math.max(k, 0)].caras
   const a = CLAVES[k - 1]
   const b = CLAVES[k]
   const t = (cuadroVideo - a.cuadro) / (b.cuadro - a.cuadro)
-  return a.bordes.map((ba, i) => ba.map((v, j) => v + (b.bordes[i][j] - v) * t)) as [Borde, Borde, Borde]
+  return a.caras.map((ca, i) => ca.map((v, j) => v + (b.caras[i][j] - v) * t)) as [Cara, Cara]
 }
 
 // Las dos caras del piso n como polígonos (en coordenadas del video)
-function carasDelPiso(piso: number, bordes: [Borde, Borde, Borde]) {
-  const y = ([, arriba, abajo]: Borde, n: number) => arriba + ((abajo - arriba) * n) / ULTIMO
-  const cara = (a: Borde, b: Borde) => [
-    [a[0], y(a, ULTIMO - piso)], [b[0], y(b, ULTIMO - piso)], [b[0], y(b, ULTIMO - piso + 1)], [a[0], y(a, ULTIMO - piso + 1)],
-  ]
-  return [cara(bordes[0], bordes[1]), cara(bordes[1], bordes[2])]
+function carasDelPiso(piso: number, caras: [Cara, Cara]) {
+  const arriba = ULTIMO - piso
+  return caras.filter(([xa, xb]) => xb - xa > 4).map(([xa, xb, ta, ba, tb, bb]) => {
+    const ya = (n: number) => ta + ((ba - ta) * n) / ULTIMO
+    const yb = (n: number) => tb + ((bb - tb) * n) / ULTIMO
+    return [[xa, ya(arriba)], [xb, yb(arriba)], [xb, yb(arriba + 1)], [xa, ya(arriba + 1)]]
+  })
 }
 
 const ruta = (carpeta: string, i: number) => `/img/vuelta/${carpeta}/${String(i).padStart(2, '0')}.webp`
@@ -81,12 +90,12 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     cerca.observe(canvas)
 
     // Encuadre: en pantallas angostas se recorta en vertical siguiendo al edificio
-    const ventana = (bordes: [Borde, Borde, Borde]) => {
+    const ventana = (caras: [Cara, Cara]) => {
       const { width: w, height: h } = canvas
       const escala = h / ALTO_VIDEO
       const anchoVisible = w / escala
       if (anchoVisible >= ANCHO_VIDEO) return { escala: w / ANCHO_VIDEO, x0: 0, y0: (h - ALTO_VIDEO * (w / ANCHO_VIDEO)) / 2 }
-      const centro = (bordes[0][0] + bordes[2][0]) / 2
+      const centro = (caras[0][0] + caras[1][1]) / 2
       const x0 = Math.min(Math.max(centro - anchoVisible / 2, 0), ANCHO_VIDEO - anchoVisible)
       return { escala, x0: -x0 * escala, y0: 0 }
     }
@@ -99,15 +108,15 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       let img = imgs[k]
       for (let d = 1; !img && d < CUADROS; d++) img = imgs[k - d] ?? imgs[k + d] ?? null
       if (!img) return
-      const bordes = bordesEn(k * 2)
-      const v = ventana(bordes)
+      const caras = carasEn(k * 2)
+      const v = ventana(caras)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(img, v.x0, v.y0, ANCHO_VIDEO * v.escala, ALTO_VIDEO * v.escala)
       // Piso elegido: relleno arcilla con borde de luz
       ctx.save()
       ctx.translate(v.x0, v.y0)
       ctx.scale(v.escala, v.escala)
-      for (const cara of carasDelPiso(s.piso, bordes)) {
+      for (const cara of carasDelPiso(s.piso, caras)) {
         ctx.beginPath()
         cara.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
         ctx.closePath()
@@ -138,11 +147,11 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     const pisoEn = (cx: number, cy: number) => {
       const r = canvas.getBoundingClientRect()
       const dpr = canvas.width / r.width
-      const bordes = bordesEn(Math.round(s.i) * 2)
-      const v = ventana(bordes)
+      const caras = carasEn(Math.round(s.i) * 2)
+      const v = ventana(caras)
       const x = ((cx - r.left) * dpr - v.x0) / v.escala
       const y = ((cy - r.top) * dpr - v.y0) / v.escala
-      return PISOS.find((p) => carasDelPiso(p, bordes).some((cara) => dentro(x, y, cara)))
+      return PISOS.find((p) => carasDelPiso(p, caras).some((cara) => dentro(x, y, cara)))
     }
     const bajarDedo = (e: PointerEvent) => { s.arrastre = { x: e.clientX, desde: s.i, movio: false }; canvas.setPointerCapture(e.pointerId) }
     const mover = (e: PointerEvent) => {
