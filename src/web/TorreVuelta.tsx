@@ -6,6 +6,7 @@ const CUADROS = 59 // cada cuadro equivale a 2 cuadros del video unido (118)
 const ANCHO_VIDEO = 1280
 const ALTO_VIDEO = 720
 const ULTIMO = PISOS.length // 8 pisos de apartamentos
+const FRENTE = 40 // cuadro donde la torre se ve de frente: ahí empieza
 
 type Borde = [x: number, arriba: number, abajo: number] // arriba = techo del piso 8, abajo = piso del 1
 type Clave = { cuadro: number; bordes: [Borde, Borde, Borde] } // izquierda, esquina, derecha
@@ -44,7 +45,7 @@ type Props = { piso: number; alElegir: (p: number) => void }
 
 export function TorreVuelta({ piso, alElegir }: Props) {
   const lienzo = useRef<HTMLCanvasElement>(null)
-  const estado = useRef({ piso, alElegir, i: 30, arrastre: null as null | { x: number; desde: number; movio: boolean }, quietoHasta: 0 })
+  const estado = useRef({ piso, alElegir, i: FRENTE, arrastre: null as null | { x: number; desde: number; movio: boolean }, pedir: () => {} })
   estado.current.piso = piso
   estado.current.alElegir = alElegir
   const [listos, setListos] = useState(0)
@@ -54,18 +55,17 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
     const s = estado.current
-    const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
     const carpeta = innerWidth * Math.min(devicePixelRatio, 2) >= 1400 ? 'hd' : 'sd'
     const imgs: (HTMLImageElement | null)[] = Array(CUADROS).fill(null)
     let vivo = true
-    // Primero el cuadro de frente, luego el resto
-    const orden = [30, ...Array.from({ length: CUADROS }, (_, k) => k).filter((k) => k !== 30)]
+    // Primero el cuadro de frente, luego los más cercanos a él
+    const orden = Array.from({ length: CUADROS }, (_, k) => k).sort((a, b) => Math.abs(a - FRENTE) - Math.abs(b - FRENTE))
     let siguiente = 0
     const bajar = () => {
       const k = orden[siguiente++]
       if (k === undefined || !vivo) return
       const img = new Image()
-      img.onload = () => { imgs[k] = img; if (vivo) setListos((n) => n + 1); bajar() }
+      img.onload = () => { imgs[k] = img; if (vivo) { setListos((n) => n + 1); pedir() } bajar() }
       img.onerror = () => { console.warn(`No cargó el cuadro ${k} de la vuelta`); bajar() }
       img.src = ruta(carpeta, k)
     }
@@ -82,20 +82,10 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       return { escala, x0: -x0 * escala, y0: 0 }
     }
 
-    let ultimo = performance.now()
-    let sentido = 1
+    // Se dibuja solo cuando algo cambia: al arrastrar, al elegir piso o al cargar un cuadro
     let cuadro = 0
-    let visible = false
-    const dibujar = (ahora: number) => {
-      cuadro = visible ? requestAnimationFrame(dibujar) : 0
-      const dt = ahora - ultimo
-      ultimo = ahora
-      // Gira sola, de un costado al otro, si nadie la está moviendo
-      if (!quieto && !s.arrastre && ahora > s.quietoHasta) {
-        s.i += sentido * dt * 0.0085
-        if (s.i >= CUADROS - 1) { s.i = CUADROS - 1; sentido = -1 }
-        if (s.i <= 0) { s.i = 0; sentido = 1 }
-      }
+    const dibujar = () => {
+      cuadro = 0
       const k = Math.round(s.i)
       let img = imgs[k]
       for (let d = 1; !img && d < CUADROS; d++) img = imgs[k - d] ?? imgs[k + d] ?? null
@@ -122,18 +112,14 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       }
       ctx.restore()
     }
-    // Solo gira mientras se ve en pantalla
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting
-      if (visible && !cuadro) { ultimo = performance.now(); cuadro = requestAnimationFrame(dibujar) }
-    })
-    io.observe(canvas)
-
+    const pedir = () => { if (!cuadro) cuadro = requestAnimationFrame(dibujar) }
+    s.pedir = pedir
     const ajustar = () => {
       const r = canvas.getBoundingClientRect()
       const dpr = Math.min(devicePixelRatio, 2)
       canvas.width = Math.round(r.width * dpr)
       canvas.height = Math.round(r.height * dpr)
+      pedir()
     }
     ajustar()
     const ro = new ResizeObserver(ajustar)
@@ -156,11 +142,11 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       const dx = e.clientX - a.x
       if (Math.abs(dx) > 4) a.movio = true
       s.i = Math.min(Math.max(a.desde - (dx / canvas.getBoundingClientRect().width) * CUADROS * 1.1, 0), CUADROS - 1)
+      pedir()
     }
     const soltar = (e: PointerEvent) => {
       const a = s.arrastre
       s.arrastre = null
-      s.quietoHasta = performance.now() + 4000
       if (a && !a.movio) { const p = pisoEn(e.clientX, e.clientY); if (p) s.alElegir(p) }
     }
     canvas.addEventListener('pointerdown', bajarDedo)
@@ -170,7 +156,6 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     return () => {
       vivo = false
       cancelAnimationFrame(cuadro)
-      io.disconnect()
       ro.disconnect()
       canvas.removeEventListener('pointerdown', bajarDedo)
       canvas.removeEventListener('pointermove', mover)
@@ -179,8 +164,8 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     }
   }, [])
 
-  // Al elegir un piso desde la lista, la torre se detiene un momento para que se vea
-  useEffect(() => { estado.current.quietoHasta = performance.now() + 2500 }, [piso])
+  // Al elegir un piso se vuelve a dibujar la marca
+  useEffect(() => { estado.current.pedir() }, [piso])
 
   return (
     <div className="relative">
