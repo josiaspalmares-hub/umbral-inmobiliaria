@@ -11,14 +11,14 @@ const FRENTE = 40 // cuadro donde la torre se ve de frente: ahí empieza
 type Borde = [x: number, arriba: number, abajo: number] // arriba = techo del piso 8, abajo = piso del 1
 type Clave = { cuadro: number; bordes: [Borde, Borde, Borde] } // izquierda, esquina, derecha
 
-// Medidos a mano sobre el video unido (1280 × 720)
+// Medidos con zoom sobre el video unido (1280 × 720): borde, techo del piso 8 y piso del 1, en cada cara
 const CLAVES: Clave[] = [
-  { cuadro: 0, bordes: [[330, 145, 500], [720, 100, 555], [870, 135, 545]] },
-  { cuadro: 30, bordes: [[440, 165, 525], [650, 80, 560], [925, 105, 555]] },
-  { cuadro: 60, bordes: [[515, 78, 556], [520, 78, 556], [865, 78, 556]] },
-  { cuadro: 79, bordes: [[465, 68, 556], [800, 68, 556], [825, 75, 552]] },
-  { cuadro: 100, bordes: [[410, 95, 545], [685, 45, 575], [870, 155, 525]] },
-  { cuadro: 117, bordes: [[405, 115, 545], [560, 45, 570], [905, 140, 545]] },
+  { cuadro: 0, bordes: [[330, 128, 512], [720, 92, 527], [870, 130, 530]] },
+  { cuadro: 30, bordes: [[440, 158, 505], [650, 90, 553], [925, 118, 548]] },
+  { cuadro: 60, bordes: [[515, 64, 550], [520, 64, 550], [865, 66, 540]] },
+  { cuadro: 79, bordes: [[465, 79, 554], [800, 79, 554], [825, 85, 548]] },
+  { cuadro: 100, bordes: [[410, 105, 527], [685, 60, 545], [870, 148, 500]] },
+  { cuadro: 117, bordes: [[405, 118, 540], [560, 70, 555], [905, 140, 532]] },
 ]
 
 function bordesEn(cuadroVideo: number): [Borde, Borde, Borde] {
