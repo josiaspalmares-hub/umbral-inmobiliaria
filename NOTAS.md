@@ -24,8 +24,14 @@
   juegos: `obra-video/tel` (vertical), `pc` (1280) y `hd` (1600, mejorado con Real-ESRGAN al 60 % + original). Si
   falta un cuadro HD usa el normal. Las etapas cambian según el momento del video (`LIMITES`).
 - **Elige tu piso** (`TorreVuelta.tsx`): dos tomas de dron unidas (izquierda invertida + derecha) en 59 cuadros.
-  Gira sola, se arrastra, y el piso se dibuja encima con polígonos calculados desde 6 cuadros clave medidos a mano
-  (`CLAVES`). La foto muestra 8 pisos: los datos son 8 pisos y 32 apartamentos.
+  Solo gira al arrastrar. Al borde derecho de la torre hay una columna de 8 puntos y el piso elegido se enciende
+  como un bombillo con su etiqueta (HTML encima del lienzo, sigue el giro). Los pisos se eligen en la cuadrícula de
+  abajo. `CLAVES` (13 cuadros medidos a mano) sirve para encuadrar y ubicar la columna. La foto muestra 8 pisos:
+  los datos son 8 pisos y 32 apartamentos.
+- Se probó pintar una franja sobre el piso elegido y se quitó: con la perspectiva del dron nunca cuadraba en todos
+  los ángulos.
+- Teléfono y tablet: los cuadros se decodifican antes de mostrarse, se dibuja solo cuando cambia algo y la vuelta
+  usa la carpeta `sd` con DPR 1,5. Probado con CPU 4 veces más lenta: sin tirones.
 - Se probó una torre de cubos en Three.js (`src/torre/`, se ve en el borrador local) y se descartó en la web porque
   se veía falsa; `torre/modelo.ts` solo aporta las etapas.
 - Guiones de Gemini en `guion-video-gemini.md`.
