@@ -1,7 +1,7 @@
 import { abrirMensaje } from '@/lib/mensaje'
 import { bolivares, dolares, type EstadoTasa } from '@/lib/moneda'
 import {
-  disponiblesEnPiso, MESES_HASTA_ENTREGA, PISOS, planDePagos, TIPOS, unidadesDelPiso,
+  MESES_HASTA_ENTREGA, planDePagos, TIPOS, unidadesDelPiso,
 } from '@/lib/torre'
 import { cn } from '@/lib/utils'
 import { useCallback, useMemo, useState } from 'react'
@@ -73,26 +73,6 @@ export function Preventa({ tasa }: { tasa: EstadoTasa }) {
         <div className="mt-8 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
           <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
             <fieldset className="min-w-0">
-              <legend className="rotulo mb-3">Piso</legend>
-              <div className="grid grid-cols-4 gap-2">
-                {PISOS.map((p) => {
-                  const libres = disponiblesEnPiso(p)
-                  return (
-                    <button
-                      key={p} type="button" onClick={() => elegirPiso(p)} aria-pressed={p === piso}
-                      aria-label={`Piso ${p}, ${libres === 0 ? 'agotado' : `${libres} disponibles`}`}
-                      className={cn('cifra flex min-h-[54px] flex-col items-center justify-center rounded-[var(--radius-campo)] border text-lg font-bold transition-colors',
-                        p === piso ? 'border-ladrillo bg-ladrillo text-white' : 'border-concreto bg-white hover:border-tinta', libres === 0 && p !== piso && 'text-gris')}
-                    >
-                      {p}
-                      <span className={cn('text-[0.7rem] font-semibold', p === piso ? 'text-white/85' : 'text-gris')}>{libres === 0 ? 'agotado' : `${libres} libres`}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </fieldset>
-
-            <fieldset className="mt-6 min-w-0">
               <legend className="rotulo mb-3">Apartamentos del piso {piso}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {unidades.map((u) => {

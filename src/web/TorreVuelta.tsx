@@ -1,11 +1,11 @@
-import { PISOS } from '@/lib/torre'
+import { disponiblesEnPiso, PISOS } from '@/lib/torre'
+import { cn } from '@/lib/utils'
 import { useEffect, useRef, useState } from 'react'
 
-// Torre que gira (toma de dron de costado a costado) con el piso elegido marcado encima
+// Torre que gira (toma de dron de costado a costado) con una botonera de pisos flotando al lado
 const CUADROS = 59 // cada cuadro equivale a 2 cuadros del video unido (118)
 const ANCHO_VIDEO = 1280
 const ALTO_VIDEO = 720
-const ULTIMO = PISOS.length // 8 pisos de apartamentos
 const FRENTE = 40 // cuadro donde la torre se ve de frente: ahí empieza
 
 // Cada cara: [x izquierda, x derecha, techo del piso 8 a la izq., piso del 1 a la izq., techo a la der., piso a la der.]
@@ -13,8 +13,8 @@ type Cara = [xa: number, xb: number, ta: number, ba: number, tb: number, bb: num
 // En la cara izquierda, x8 es donde empieza el piso 8: el ala de la izquierda tiene un piso menos
 type Clave = { cuadro: number; caras: [Cara, Cara] }
 
-// Techo del piso 8 y piso del 1 medidos a mano con zoom en 13 cuadros del video unido (1280 × 720);
-// los pisos intermedios se reparten entre esas dos líneas y se revisaron pintándolos en colores alternos
+// Bordes de la torre medidos a mano en 13 cuadros del video unido (1280 × 720): en pantallas
+// angostas el encuadre sigue al edificio
 const CLAVES: Clave[] = [
   { cuadro: 0, caras: [[435, 720, 110, 546, 110, 546, 435], [720, 870, 90, 551, 130, 532]] },
   { cuadro: 10, caras: [[470, 708, 113, 548, 82, 548, 530], [708, 900, 84, 558, 128, 545]] },
@@ -40,28 +40,13 @@ function carasEn(cuadroVideo: number): [Cara, Cara] {
   return a.caras.map((ca, i) => (ca as number[]).map((v, j) => v + ((b.caras[i] as number[])[j] - v) * t)) as [Cara, Cara]
 }
 
-// Las dos caras del piso n como polígonos (en coordenadas del video)
-function carasDelPiso(piso: number, caras: [Cara, Cara]) {
-  const arriba = ULTIMO - piso
-  return caras.filter(([xa, xb]) => xb - xa > 4).map(([xa, xb, ta, ba, tb, bb, x8]) => {
-    const ya = (n: number) => ta + ((ba - ta) * n) / ULTIMO
-    const yb = (n: number) => tb + ((bb - tb) * n) / ULTIMO
-    // El piso 8 no pasa sobre el ala baja: se recorta desde x8, siguiendo la misma línea de losa
-    const xi = piso === ULTIMO && x8 !== undefined ? Math.min(x8, xb - 4) : xa
-    const enX = (n: number) => ya(n) + ((yb(n) - ya(n)) * (xi - xa)) / (xb - xa)
-    return [[xi, enX(arriba)], [xb, yb(arriba)], [xb, yb(arriba + 1)], [xi, enX(arriba + 1)]]
-  })
-}
-
 const ruta = (carpeta: string, i: number) => `/img/vuelta/${carpeta}/${String(i).padStart(2, '0')}.webp`
 
 type Props = { piso: number; alElegir: (p: number) => void }
 
 export function TorreVuelta({ piso, alElegir }: Props) {
   const lienzo = useRef<HTMLCanvasElement>(null)
-  const estado = useRef({ piso, alElegir, i: FRENTE, arrastre: null as null | { x: number; desde: number; movio: boolean }, pedir: () => {}, mostrado: FRENTE })
-  estado.current.piso = piso
-  estado.current.alElegir = alElegir
+  const estado = useRef({ i: FRENTE, arrastre: null as null | { x: number; desde: number }, pedir: () => {} })
   const [listos, setListos] = useState(0)
 
   useEffect(() => {
@@ -100,7 +85,8 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       const escala = h / ALTO_VIDEO
       const anchoVisible = w / escala
       if (anchoVisible >= ANCHO_VIDEO) return { escala: w / ANCHO_VIDEO, x0: 0, y0: (h - ALTO_VIDEO * (w / ANCHO_VIDEO)) / 2 }
-      const centro = (caras[0][0] + caras[1][1]) / 2
+      // Corrida un poco a la izquierda para dejar sitio a la botonera
+      const centro = (caras[0][0] + caras[1][1]) / 2 + anchoVisible * 0.07
       const x0 = Math.min(Math.max(centro - anchoVisible / 2, 0), ANCHO_VIDEO - anchoVisible)
       return { escala, x0: -x0 * escala, y0: 0 }
     }
@@ -113,36 +99,16 @@ export function TorreVuelta({ piso, alElegir }: Props) {
       return null
     }
 
-    // Se dibuja solo cuando algo cambia: al arrastrar, al elegir piso o al cargar un cuadro
+    // Se dibuja solo cuando algo cambia: al arrastrar o al cargar un cuadro
     let cuadro = 0
     const dibujar = () => {
       cuadro = 0
-      // Mientras cargan, se muestra el cuadro listo más cercano; la franja usa la forma de ESE cuadro
+      // Mientras cargan, se muestra el cuadro listo más cercano
       const k = cuadroListo(Math.round(s.i))
       if (k === null) return
-      const img = imgs[k]!
-      s.mostrado = k
-      const caras = carasEn(k * 2)
-      const v = ventana(caras)
+      const v = ventana(carasEn(k * 2))
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, v.x0, v.y0, ANCHO_VIDEO * v.escala, ALTO_VIDEO * v.escala)
-      // Piso elegido: relleno arcilla con borde de luz
-      ctx.save()
-      ctx.translate(v.x0, v.y0)
-      ctx.scale(v.escala, v.escala)
-      for (const cara of carasDelPiso(s.piso, caras)) {
-        ctx.beginPath()
-        cara.forEach(([x, y], n) => (n ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
-        ctx.closePath()
-        ctx.fillStyle = 'rgba(217, 115, 74, 0.42)'
-        ctx.fill()
-        ctx.lineWidth = 2.5
-        ctx.strokeStyle = '#f2b36b'
-        ctx.shadowColor = 'rgba(242, 179, 107, 0.8)'
-        ctx.shadowBlur = 14
-        ctx.stroke()
-      }
-      ctx.restore()
+      ctx.drawImage(imgs[k]!, v.x0, v.y0, ANCHO_VIDEO * v.escala, ALTO_VIDEO * v.escala)
     }
     const pedir = () => { if (!cuadro) cuadro = requestAnimationFrame(dibujar) }
     s.pedir = pedir
@@ -157,30 +123,15 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     const ro = new ResizeObserver(ajustar)
     ro.observe(canvas)
 
-    // Tocar un piso en la imagen lo elige
-    const pisoEn = (cx: number, cy: number) => {
-      const r = canvas.getBoundingClientRect()
-      const dpr = canvas.width / r.width
-      const caras = carasEn(s.mostrado * 2)
-      const v = ventana(caras)
-      const x = ((cx - r.left) * dpr - v.x0) / v.escala
-      const y = ((cy - r.top) * dpr - v.y0) / v.escala
-      return PISOS.find((p) => carasDelPiso(p, caras).some((cara) => dentro(x, y, cara)))
-    }
-    const bajarDedo = (e: PointerEvent) => { s.arrastre = { x: e.clientX, desde: s.i, movio: false }; canvas.setPointerCapture(e.pointerId) }
+    const bajarDedo = (e: PointerEvent) => { s.arrastre = { x: e.clientX, desde: s.i }; canvas.setPointerCapture(e.pointerId) }
     const mover = (e: PointerEvent) => {
       const a = s.arrastre
-      if (!a) { canvas.style.cursor = pisoEn(e.clientX, e.clientY) ? 'pointer' : 'grab'; return }
+      if (!a) return
       const dx = e.clientX - a.x
-      if (Math.abs(dx) > 4) a.movio = true
       s.i = Math.min(Math.max(a.desde - (dx / canvas.getBoundingClientRect().width) * CUADROS * 1.1, 0), CUADROS - 1)
       pedir()
     }
-    const soltar = (e: PointerEvent) => {
-      const a = s.arrastre
-      s.arrastre = null
-      if (a && !a.movio) { const p = pisoEn(e.clientX, e.clientY); if (p) s.alElegir(p) }
-    }
+    const soltar = () => { s.arrastre = null }
     canvas.addEventListener('pointerdown', bajarDedo)
     canvas.addEventListener('pointermove', mover)
     canvas.addEventListener('pointerup', soltar)
@@ -197,30 +148,44 @@ export function TorreVuelta({ piso, alElegir }: Props) {
     }
   }, [])
 
-  // Al elegir un piso se vuelve a dibujar la marca
-  useEffect(() => { estado.current.pedir() }, [piso])
-
   return (
     <div className="relative">
       <canvas
-        ref={lienzo} role="img" aria-label={`Torre Umbral girando, con el piso ${piso} marcado`}
-        className="block aspect-[4/5] w-full cursor-grab touch-pan-y rounded-[var(--radius-tarjeta)] bg-tinta select-none sm:aspect-[16/9]"
+        ref={lienzo} role="img" aria-label="Torre Umbral, se puede girar arrastrando"
+        className="block aspect-[4/5] w-full cursor-grab touch-pan-y rounded-[var(--radius-tarjeta)] bg-tinta select-none active:cursor-grabbing sm:aspect-[16/9]"
       />
-      <p className="dato pointer-events-none absolute top-3 left-3 rounded-[4px] bg-tinta/80 px-2 py-1 text-papel" aria-hidden="true">↔ Arrastra para girar · toca un piso</p>
-      <p className="dato pointer-events-none absolute right-3 bottom-3 rounded-[4px] bg-atardecer px-2 py-1 text-tinta" aria-hidden="true">Piso {piso}</p>
+      <p className="dato pointer-events-none absolute top-3 left-3 rounded-[4px] bg-tinta/80 px-2 py-1 text-papel" aria-hidden="true">↔ Arrastra para girar</p>
       {listos < CUADROS && (
         <p className="dato pointer-events-none absolute bottom-3 left-3 rounded-[4px] bg-tinta/80 px-2 py-1 text-papel">Cargando la vuelta… {Math.round((listos / CUADROS) * 100)} %</p>
       )}
+      <Botonera piso={piso} alElegir={alElegir} />
     </div>
   )
 }
 
-function dentro(x: number, y: number, poligono: number[][]) {
-  let adentro = false
-  for (let a = 0, b = poligono.length - 1; a < poligono.length; b = a++) {
-    const [xa, ya] = poligono[a]
-    const [xb, yb] = poligono[b]
-    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) adentro = !adentro
-  }
-  return adentro
+// Como el tablero de un ascensor: del 8 arriba al 1 abajo
+function Botonera({ piso, alElegir }: Props) {
+  return (
+    <fieldset className="absolute top-1/2 right-2 -translate-y-1/2 rounded-[6px] bg-tinta/85 p-1 text-papel sm:right-4 sm:p-1.5">
+      <legend className="solo-lector">Elige un piso</legend>
+      <p className="dato hidden px-2 pt-1 pb-1.5 text-papel/70 sm:block" aria-hidden="true">Piso</p>
+      <div className="flex flex-col gap-1">
+        {[...PISOS].reverse().map((p) => {
+          const libres = disponiblesEnPiso(p)
+          const activo = p === piso
+          return (
+            <button
+              key={p} type="button" onClick={() => alElegir(p)} aria-pressed={activo}
+              aria-label={`Piso ${p}, ${libres === 0 ? 'agotado' : `${libres} disponibles`}`}
+              className={cn('cifra flex min-h-[34px] min-w-[38px] items-center justify-center gap-3 rounded-[4px] px-2 text-sm font-bold transition-colors sm:min-h-[36px] sm:min-w-[132px] sm:justify-between',
+                activo ? 'bg-atardecer text-tinta' : 'hover:bg-papel/15', libres === 0 && !activo && 'text-papel/45')}
+            >
+              <span>{p}</span>
+              <span className={cn('hidden text-[0.72rem] font-semibold sm:inline', activo ? 'text-tinta/75' : 'text-papel/65')}>{libres === 0 ? 'agotado' : `${libres} libres`}</span>
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
 }
