@@ -1,11 +1,10 @@
 import { PISOS } from '@/lib/torre'
 import { useEffect, useRef, useState } from 'react'
 
-// Torre que gira (toma de dron de costado a costado) con un bombillo en el piso elegido
+// Torre que gira (toma de dron de costado a costado) con una columna de pisos al costado
 const CUADROS = 59 // cada cuadro equivale a 2 cuadros del video unido (118)
 const ANCHO_VIDEO = 1280
 const ALTO_VIDEO = 720
-const ULTIMO = PISOS.length // 8 pisos de apartamentos
 const FRENTE = 40 // cuadro donde la torre se ve de frente: ahí empieza
 
 // Cada cara: [x izquierda, x derecha, techo del piso 8 a la izq., piso del 1 a la izq., techo a la der., piso a la der.]
@@ -14,7 +13,7 @@ type Cara = [xa: number, xb: number, ta: number, ba: number, tb: number, bb: num
 type Clave = { cuadro: number; caras: [Cara, Cara] }
 
 // Techo del piso 8 y piso del 1 medidos a mano en 13 cuadros del video unido (1280 × 720);
-// sirven para encuadrar y para ubicar el bombillo a media altura del piso
+// sirven para encuadrar y para pegar la columna de pisos al borde derecho
 const CLAVES: Clave[] = [
   { cuadro: 0, caras: [[435, 720, 110, 546, 110, 546, 435], [720, 870, 90, 551, 130, 532]] },
   { cuadro: 10, caras: [[470, 708, 113, 548, 82, 548, 530], [708, 900, 84, 558, 128, 545]] },
@@ -40,16 +39,8 @@ function carasEn(cuadroVideo: number): [Cara, Cara] {
   return a.caras.map((ca, i) => (ca as number[]).map((v, j) => v + ((b.caras[i] as number[])[j] - v) * t)) as [Cara, Cara]
 }
 
-// Centro del piso n sobre la cara más ancha (en coordenadas del video)
-function centroDelPiso(piso: number, caras: [Cara, Cara]) {
-  const [xa, xb, ta, ba, tb, bb, x8] = caras[0][1] - caras[0][0] >= caras[1][1] - caras[1][0] ? caras[0] : caras[1]
-  const inicio = piso === ULTIMO && x8 !== undefined ? x8 : xa
-  const x = (inicio + xb) / 2
-  const t = (x - xa) / Math.max(xb - xa, 1)
-  const techo = ta + (tb - ta) * t
-  const suelo = ba + (bb - ba) * t
-  return { x, y: techo + ((suelo - techo) * (ULTIMO - piso + 0.5)) / ULTIMO }
-}
+// Borde derecho de la torre: de techo del piso 8 a piso del 1 (en coordenadas del video)
+const bordeDerecho = (caras: [Cara, Cara]) => ({ x: caras[1][1], arriba: caras[1][4], abajo: caras[1][5] })
 
 const ruta = (carpeta: string, i: number) => `/img/vuelta/${carpeta}/${String(i).padStart(2, '0')}.webp`
 
@@ -120,12 +111,18 @@ export function TorreVuelta({ piso }: { piso: number }) {
       const v = ventana(caras)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(imgs[k]!, v.x0, v.y0, ANCHO_VIDEO * v.escala, ALTO_VIDEO * v.escala)
-      // El bombillo es HTML encima del lienzo: se mueve con transform y late con CSS
+      // La columna es HTML encima del lienzo: sigue el borde con transform y el bombillo late con CSS
       const m = marca.current
       if (m) {
-        const dpr = canvas.width / canvas.getBoundingClientRect().width
-        const c = centroDelPiso(s.piso, caras)
-        m.style.transform = `translate(${(c.x * v.escala + v.x0) / dpr}px, ${(c.y * v.escala + v.y0) / dpr}px)`
+        const ancho = canvas.getBoundingClientRect().width
+        const dpr = canvas.width / ancho
+        const b = bordeDerecho(caras)
+        const x = Math.min((b.x * v.escala + v.x0) / dpr + 10, ancho - 16)
+        const arriba = (b.arriba * v.escala + v.y0) / dpr
+        m.style.transform = `translate(${x}px, ${arriba}px)`
+        m.style.height = `${((b.abajo - b.arriba) * v.escala) / dpr}px`
+        // Si no cabe la etiqueta a la derecha, va del lado de la torre
+        m.dataset.lado = x + 100 > ancho ? 'izq' : 'der'
         m.hidden = false
       }
     }
@@ -176,11 +173,19 @@ export function TorreVuelta({ piso }: { piso: number }) {
         ref={lienzo} role="img" aria-label={`Torre Umbral girando, con el piso ${piso} marcado`}
         className="block aspect-[4/5] w-full cursor-grab touch-pan-y bg-tinta select-none active:cursor-grabbing sm:aspect-[16/9]"
       />
-      <div ref={marca} hidden className="pointer-events-none absolute top-0 left-0 will-change-transform" aria-hidden="true">
-        <div className="flex -translate-x-[7px] -translate-y-1/2 items-center gap-2">
-          <span className="bombillo shrink-0" />
-          <span className="dato rounded-[4px] bg-tinta/85 px-2 py-1 whitespace-nowrap text-papel">Piso {piso}</span>
-        </div>
+      <div ref={marca} hidden data-lado="der" className="group pointer-events-none absolute top-0 left-0 flex w-0 flex-col will-change-transform" aria-hidden="true">
+        {[...PISOS].reverse().map((p) => (
+          <div key={p} className="relative flex flex-1 items-center">
+            {p === piso ? (
+              <>
+                <span className="bombillo -ml-[7px] shrink-0" />
+                <span className="dato absolute left-4 rounded-[4px] bg-tinta/85 px-2 py-1 whitespace-nowrap text-papel group-data-[lado=izq]:right-4 group-data-[lado=izq]:left-auto">Piso {p}</span>
+              </>
+            ) : (
+              <span className="-ml-[3px] size-1.5 shrink-0 rounded-full bg-papel/70 shadow-[0_0_0_1px_rgba(31,29,27,0.35)]" />
+            )}
+          </div>
+        ))}
       </div>
       <p className="dato pointer-events-none absolute top-3 left-3 rounded-[4px] bg-tinta/80 px-2 py-1 text-papel" aria-hidden="true">↔ Arrastra para girar</p>
       {listos < CUADROS && (
